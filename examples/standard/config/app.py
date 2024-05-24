@@ -6,5 +6,11 @@
 # import os.path
 # fileConfig(r'/mapproxy/log.ini', {'here': os.path.dirname(__file__)})
 
+import logging
+import logging.config
 from mapproxy.wsgiapp import make_wsgi_app
+
+# Setup logging
+logging.config.fileConfig(r'/mapproxy/log.ini')
+
 application = make_wsgi_app(r'/mapproxy/mapproxy.yaml')

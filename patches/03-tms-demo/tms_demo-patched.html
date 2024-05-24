@@ -1,0 +1,117 @@
+{{py:
+from html import escape
+import textwrap
+
+wrapper = textwrap.TextWrapper(replace_whitespace=False, width=90,
+                               break_long_words=False)
+
+def approx_bbox(layer, srs):
+    from mapproxy.srs import SRS
+    extent = layer.md['extent'].bbox_for(SRS(srs))
+    return ', '.join(map(lambda x: '%.2f' % x, extent))
+
+menu_title= "TMS %s %s"%(layer.name, srs)
+jscript_functions=None
+}}
+{{def jscript_openlayers}}
+<script src="static/ol.js"></script>
+<script src="static/proj4.min.js"></script>
+<link rel="stylesheet" href="static/ol.css">
+<script type="text/javascript">
+    async function init() {
+
+        const transparent = {{if format == 'png'}}true{{else}}false{{endif}};
+        const format = "{{format}}";
+        const srs = "{{srs}}";
+        const tileSize = "{{layer.grid.tile_size}}";  // TODO allow custom e.g. Retina tilesizes
+        const extent = [{{', '.join(str(r) for r in layer.bbox)}}];
+        const grid_extent = [{{', '.join(str(r) for r in layer.grid.bbox)}}];
+        const resolutions = [{{', '.join(str(r) for r in resolutions)}}];
+
+        if (!ol.proj.get(srs)) {
+            const allDefs = await import('./static/proj4defs.js');
+            const srsNum = srs.indexOf(':') > -1 ? parseInt(srs.split(':')[1]) : parseInt(srs);
+            if (!allDefs.defs[srsNum]) {
+                alert("The preview map does not support this coordinate system");
+                return;
+            }
+            proj4.defs(srs, allDefs.defs[srsNum]);
+            ol.proj.proj4.register(proj4);
+        }
+
+        // Define TMS as specialized XYZ service: origin lower-left and may have custom grid
+        const source = new ol.source.XYZ({
+            url: '../tms/1.0.0/{{"/".join(layer.md["name_path"])}}/{z}/{x}/{-y}.' + format,
+            opaque: transparent,
+            projection: "{{srs}}",
+            maxResolution: {{resolutions[0]}},
+            tileGrid: new  ol.tilegrid.TileGrid({
+               tileSize: 256,
+               resolutions: resolutions,
+               extent: grid_extent
+            }),
+        });
+
+        const background_source = new ol.source.XYZ({
+            url: "{{background_url}}"
+        });
+
+        const layers = [
+            new ol.layer.Tile({
+                source: background_source
+            }),
+            new ol.layer.Tile({source})
+        ];
+        const map = new ol.Map({
+            layers: layers,
+            target: 'map',
+            view: new ol.View({
+                projection: "{{srs}}"
+            })
+        });
+        map.getView().fit(extent);
+
+        zoomToFullExtent = () => {
+            map.getView().fit(extent);
+        }
+
+        toogleBackgroundMap = () => {
+            layers[0].setVisible(!layers[0].getVisible());
+        }
+}
+</script>
+{{enddef}}
+            <h2>Layer Preview - {{layer.name}}</h2>
+            <form action="" method="GET">
+                <table>
+                    <tr><th>Coordinate System</th><th>Image format</th></tr>
+                    <tr><td>
+                            <select name="srs" size="1" onchange="this.form.submit()">
+                                {{for tms_layer in all_tile_layers.values()}}
+                                    {{if tms_layer.name == layer.name and tms_layer.grid.supports_access_with_origin('sw')}}
+                                        {{if tms_layer.md['name_internal'] == layer.md['name_internal']}}
+                                            <option selected value="{{srs}}">{{srs}}</option>
+                                        {{else}}
+                                            <option value="{{tms_layer.grid.srs.srs_code}}">{{tms_layer.grid.srs.srs_code}}</option>
+                                        {{endif}}
+                                    {{endif}}
+                                {{endfor}}
+                            </select>
+                            <input type="hidden" name="format" value="{{format}}">
+                            <input type="hidden" name="tms_layer" value="{{layer.name}}">
+                        </td>
+                        <td>{{format}}</td></tr>
+                </table>
+              </form>
+            <div id='map'></div>
+            <button class="mapBtn" onclick="zoomToFullExtent()">Zoom to full extent</button>
+            <button class="mapBtn" onclick="toogleBackgroundMap()">Toggle background map</button>
+            <h3>Bounding Box</h3>
+            <p class="code">{{', '.join(str(s) for s in layer.grid.bbox)}}</p>
+            <h3>Level and Resolutions</h3>
+            <table class="code">
+                <tr><th>Level</th><th>Resolution</th></tr>
+                {{for level, res in layer.grid.tile_sets}}
+                <tr><td>{{level}}</td><td>{{res}}</td></tr>
+                {{endfor}}
+            </table>

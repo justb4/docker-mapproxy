@@ -1,5 +1,3 @@
-version: "3"
-
 # Example docker-compose file, adapt for your setup
 services:
 
@@ -20,3 +18,4 @@ services:
     volumes:
       - ./config:/mapproxy:rw
       - ./cache:/mapproxy_cache:rw
+      - ./log:/mapproxy_log:rw

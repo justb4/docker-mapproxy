@@ -17,6 +17,8 @@ browse to http://localhost:8085/demo/?tms_layer=dutch_aerial&format=jpeg&srs=EPS
 
 The local directory `./config` will be mapped to the MP Container `/mapproxy` dir.
 The `cache` directory will be mapped to the `/mapproxy_cache` dir.
+Also we enabled logging into the local `log/` dir using [log.ini](config/log.ini)
+After running you can remove the `log` and `cache` dirs.
 
 ## Alternaive
 

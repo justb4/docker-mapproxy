@@ -1,5 +1,3 @@
-version: "3"
-
 # Example docker-compose file, adapt for your setup
 services:
 

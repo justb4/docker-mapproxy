@@ -29,7 +29,7 @@ The second example should give you a nice starter.
 But you can run the container with standard `docker`:
 
 ```bash
-docker run -v /path/to/mapproxy:/mapproxy -p 8080:8080 yagajs/mapproxy
+docker run -v /path/to/mapproxy:/mapproxy -p 8080:8080 justb4/mapproxy
 ```
 
 *It is optional, but recommended to add a volume. Within the volume mapproxy get the configuration, or create one
@@ -39,7 +39,7 @@ The container normally runs in [http-socket-mode](http://uwsgi-docs.readthedocs.
 run the image behind a HTTP-Proxy, like [Nginx](http://nginx.org/), you can run it in direct http-mode by running:
 
 ```bash
-docker run -v /path/to/mapproxy:/mapproxy -p 8080:8080 yagajs/mapproxy mapproxy http
+docker run -v /path/to/mapproxy:/mapproxy -p 8080:8080 justb4/mapproxy mapproxy http
 ```
 
 ### Environment variables

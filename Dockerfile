@@ -1,6 +1,7 @@
-FROM debian:buster-slim
+FROM python:3.11-slim-bookworm
 
-# Notes by Just van den Broecke - July 2020
+# Notes by Just van den Broecke
+# July 2020
 # The original image (from 2019), based on Debian Buster Python3 was around 1GB.
 # Slimmed down to 294MB by:
 # - using Debian Slim image.
@@ -16,6 +17,12 @@ FROM debian:buster-slim
 # Upgrade notes: in bullseye: use libproj19 uwsgi-plugin-python3 (i.s.o. pip3 uwsgi)
 # --plugin /usr/lib/uwsgi/plugins/python3_plugin.so in uwsgi command and remove --wsgi-disable-file-wrapper
 
+# May 2024
+# * Python 3.11 and MapProxy 2.0.2
+# * upgrade Base image to python:3.11-slim-bookworm
+# * drop support for EPSG:900913
+# * patch TMS demo HTML
+
 LABEL original_developer="Arne Schubert <atd.schubert@gmail.com>"
 LABEL contributor="Just van den Broecke <justb4@gmail.com>"
 
@@ -25,31 +32,32 @@ ARG LOCALE="en_US.UTF-8"
 # Only adds 1MB and handy tools
 ARG ADD_DEB_PACKAGES="curl xsltproc libxml2-utils patch"
 ARG ADD_PIP_PACKAGES=""
-ARG MAPPROXY_VERSION="1.13.2"
+ARG MAPPROXY_VERSION="2.0.2"
 
 # ENV settings
 ENV MAPPROXY_PROCESSES="4" \
 	MAPPROXY_THREADS="2" \
 	UWSGI_EXTRA_OPTIONS="" \
 	DEBIAN_FRONTEND="noninteractive" \
-	DEB_BUILD_DEPS="python3-pip build-essential python3-dev python3-setuptools python3-wheel" \
-	DEB_PACKAGES="python3-pil python3-yaml python3-gdal libproj13 python3-lxml python3-shapely libgeos-dev uwsgi-plugin-python3 ${ADD_DEB_PACKAGES}" \
-	PIP_PACKAGES="uwsgi requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
+	DEB_BUILD_DEPS="build-essential libpcre2-dev" \
+	DEB_PACKAGES="python3-pil python3-yaml python3-pyproj libgeos-dev python3-lxml libgdal-dev python3-shapely libxml2-dev libxslt-dev uwsgi-plugin-python3 ${ADD_DEB_PACKAGES}" \
+	PIP_PACKAGES="uwsgi pyproj requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
 
 RUN set -x \
-  && apt-get update \
-  && apt-get install --no-install-recommends -y ${DEB_BUILD_DEPS} ${DEB_PACKAGES} ${ADD_DEB_PACKAGES} \
+  && apt update \
+  && apt install --no-install-recommends -y ${DEB_BUILD_DEPS} ${DEB_PACKAGES} ${ADD_DEB_PACKAGES} \
   && useradd -ms /bin/bash mapproxy \
   && mkdir -p /mapproxy \
   && chown mapproxy /mapproxy \
   && pip3 install ${PIP_PACKAGES} ${ADD_PIP_PACKAGES} \
   && mkdir -p /docker-entrypoint-initmapproxy.d \
   && pip3 uninstall --yes wheel \
+  && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
   && apt-get remove --purge ${DEB_BUILD_DEPS} -y \
-  && apt autoremove -y  \
+  && apt-get -y --purge autoremove  \
+  && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# RUN sed -i -r 's|^(from )cgi|\1html|g;s|^(import )cgi$|\1html|g;s|^(import )cgi$|\1html|g;s|\{\{cgi(\.escape)|{{html\1|g' /usr/local/lib/python3.8/dist-packages/mapproxy/service/templates/demo/*.html /usr/local/lib/python3.8/dist-packages/mapproxy/service/template_helper.py
 COPY patches/ /patches
 RUN cd /patches && ./apply.sh && cd -
 
