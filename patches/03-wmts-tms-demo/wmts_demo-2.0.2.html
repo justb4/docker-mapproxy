@@ -1,0 +1,115 @@
+{{py:
+from html import escape
+import textwrap
+
+wrapper = textwrap.TextWrapper(replace_whitespace=False, width=90,
+                               break_long_words=False)
+
+def approx_bbox(layer, srs):
+    from mapproxy.srs import SRS
+    extent = layer.md['extent'].bbox_for(SRS(srs))
+    return ', '.join(map(lambda x: '%.2f' % x, extent))
+
+menu_title= "WMTS %s %s"%(layer.name, srs)
+jscript_functions=None
+}}
+{{def jscript_openlayers}}
+<script src="static/ol.js"></script>
+<script src="static/proj4.min.js"></script>
+<link rel="stylesheet" href="static/ol.css">
+<script type="text/javascript">
+    async function init() {
+
+        const transparent = "{{if format == 'image/png'}}true{{endif}}";
+        const srs = "{{srs}}";
+        const grid_extent = [{{', '.join(str(r) for r in layer.grid.bbox)}}];
+        const extent = [{{', '.join(str(r) for r in layer.bbox)}}];
+        const resolutions = [{{', '.join(str(r) for r in resolutions)}}];
+        const matrixIds = [];
+        for (let z = 0; z < resolutions.length; ++z) {
+            matrixIds[z] = z;
+        }
+
+        if (!ol.proj.get(srs)) {
+            const allDefs = await import('./static/proj4defs.js');
+            const srsNum = srs.indexOf(':') > -1 ? parseInt(srs.split(':')[1]) : parseInt(srs);
+            if (!allDefs.defs[srsNum]) {
+                alert("The preview map does not support this coordinate system");
+                return;
+            }
+            proj4.defs(srs, allDefs.defs[srsNum]);
+            ol.proj.proj4.register(proj4);
+        }
+
+        const projection = ol.proj.get(srs);
+
+        const source = new ol.source.WMTS({
+            url: '../service?',
+            layer: "{{layer.name}}",
+            matrixSet: '{{matrix_set}}',
+            format: "{{format}}",
+            projection: "{{srs}}",
+            transparent: transparent === "true" ? true: false,
+            style: '',
+            tileGrid: new ol.tilegrid.WMTS({
+                origin: ol.extent.getTopLeft(grid_extent),
+                resolutions: resolutions,
+                matrixIds
+            })
+        });
+
+        const background_source = new ol.source.XYZ({
+            url: "{{background_url}}"
+        });
+
+        const layers = [
+            new ol.layer.Tile({
+                source: background_source
+            }),
+            new ol.layer.Tile({source})
+        ];
+        const map = new ol.Map({
+            layers: layers,
+            target: 'map',
+            view: new ol.View({
+                projection: "{{srs}}",
+                resolutions
+            })
+        });
+        map.getView().fit(extent);
+
+        zoomToFullExtent = () => {
+            map.getView().fit(extent);
+        }
+
+        toogleBackgroundMap = () => {
+            layers[0].setVisible(!layers[0].getVisible());
+        }
+    }
+</script>
+{{enddef}}
+            <h2>Layer Preview - {{layer.name}}</h2>
+            <table>
+                <tr><th>Coordinate System</th><th>Image format</th></tr>
+                <tr><td>
+                        <select name="srs" size="1" onchange="this.form.submit()">
+                                {{for wmts_layer in all_tile_layers.values()}}
+                                    {{if wmts_layer.name == layer.name and wmts_layer.grid.supports_access_with_origin('nw')}}
+                                        {{if wmts_layer.md['name_internal'] == layer.md['name_internal']}}
+                                            <option selected value="{{srs}}">{{srs}}</option>
+                                        {{else}}
+                                            <option value="{{wmts_layer.grid.srs.srs_code}}">{{wmts_layer.grid.srs.srs_code}}</option>
+                                        {{endif}}
+                                    {{endif}}
+                                {{endfor}}
+                            </select>
+                            <input type="hidden" name="format" value="{{format}}">
+                            <input type="hidden" name="wmts_layer" value="{{layer.name}}">
+                    </td>
+                    <td>{{layer.format}}</td></tr>
+            </table>
+            <div id='map'></div>
+            <button class="mapBtn" onclick="zoomToFullExtent()">Zoom to full extent</button>
+            <button class="mapBtn" onclick="toogleBackgroundMap()">Toggle background map</button>
+            <h3>Bounding Box</h3>
+            <p class="code">{{', '.join(str(s) for s in layer.extent.bbox)}}</p>
