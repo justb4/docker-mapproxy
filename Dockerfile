@@ -39,9 +39,11 @@ ENV MAPPROXY_PROCESSES="4" \
 	MAPPROXY_THREADS="2" \
 	UWSGI_EXTRA_OPTIONS="" \
 	DEBIAN_FRONTEND="noninteractive" \
+	PROJ_DATA="/usr/share/proj" \
+	PYTHONPATH="/usr/lib/python3/dist-packages" \
 	DEB_BUILD_DEPS="build-essential libpcre2-dev" \
 	DEB_PACKAGES="python3-pil python3-yaml python3-pyproj libgeos-dev python3-lxml libgdal-dev python3-shapely libxml2-dev libxslt-dev uwsgi-plugin-python3 ${ADD_DEB_PACKAGES}" \
-	PIP_PACKAGES="uwsgi pyproj requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
+	PIP_PACKAGES="uwsgi requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
 
 RUN set -x \
   && apt update \
@@ -52,9 +54,10 @@ RUN set -x \
   && pip3 install ${PIP_PACKAGES} ${ADD_PIP_PACKAGES} \
   && mkdir -p /docker-entrypoint-initmapproxy.d \
   && pip3 uninstall --yes wheel \
+  && pip3 cache purge \
   && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
-  && apt-get remove --purge ${DEB_BUILD_DEPS} -y \
-  && apt-get -y --purge autoremove  \
+  && apt-get remove --yes --purge  ${DEB_BUILD_DEPS} \
+  && apt-get --yes --purge autoremove \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

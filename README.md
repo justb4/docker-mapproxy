@@ -58,6 +58,36 @@ docker exec -it mapproxy mapproxy-seed -f /mapproxy/mapproxy.yaml -s /mapproxy/s
 
 ```
 
+## Proj Version Info
+
+Proj in `/usr/lib` from `python3-proj` package.
+
+```
+$ /usr/bin/pyproj -v
+
+pyproj info:
+    pyproj: 3.4.1
+      PROJ: 9.1.1
+  data dir: /usr/share/proj
+user_data_dir: /tmp/proj
+PROJ DATA (recommended version): 1.12
+PROJ Database: 1.2
+EPSG Database: v10.076 [2022-08-31]
+ESRI Database: ArcGIS Pro 3.0 [2022-07-09]
+IGNF Database: 3.1.0 [2019-05-24]
+
+System:
+    python: 3.11.2 (main, Mar 13 2023, 12:18:29) [GCC 12.2.0]
+executable: /usr/bin/python3
+   machine: Linux-6.6.22-linuxkit-aarch64-with-glibc2.36
+
+Python deps:
+   certifi: 2022.9.24
+    Cython: None
+setuptools: None
+       pip: None
+
+```
 ## Enhance the image
 
 You can put a `mapproxy.yaml` into the `/docker-entrypoint-initmapproxy.d` folder on the image. On startup this will be
