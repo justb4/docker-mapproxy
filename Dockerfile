@@ -22,8 +22,6 @@ FROM python:3.11-slim-bookworm
 # * upgrade Base image to python:3.11-slim-bookworm
 # * drop support for EPSG:900913
 # * patch TMS demo HTML
-# * uwsgi from python3-uwsgi i.s.o. PyPi/pip: no build deps needed!
-# * ENV settings: PROJ_DATA and PYTHONPATH
 
 LABEL original_developer="Arne Schubert <atd.schubert@gmail.com>"
 LABEL contributor="Just van den Broecke <justb4@gmail.com>"
@@ -42,13 +40,14 @@ ENV MAPPROXY_PROCESSES="4" \
 	UWSGI_EXTRA_OPTIONS="" \
 	DEBIAN_FRONTEND="noninteractive" \
 	PROJ_DATA="/usr/share/proj" \
-	PYTHONPATH="/usr/lib/python3/dist-packages:/usr/local/lib/python3.11/site-packages" \
-	DEB_PACKAGES="python3-pil python3-yaml python3-pyproj libgeos-dev python3-lxml libgdal-dev python3-shapely libxml2-dev libxslt-dev uwsgi uwsgi-plugin-python3 ${ADD_DEB_PACKAGES}" \
-	PIP_PACKAGES="requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
+	PYTHONPATH="/usr/lib/python3/dist-packages" \
+	DEB_BUILD_DEPS="build-essential libpcre2-dev" \
+	DEB_PACKAGES="python3-pil python3-yaml python3-pyproj libgeos-dev python3-lxml libgdal-dev python3-shapely libxml2-dev libxslt-dev uwsgi-plugin-python3 ${ADD_DEB_PACKAGES}" \
+	PIP_PACKAGES="uwsgi requests geojson watchdog MapProxy==${MAPPROXY_VERSION} ${ADD_PIP_PACKAGES}"
 
 RUN set -x \
   && apt update \
-  && apt install --no-install-recommends -y ${DEB_PACKAGES} ${ADD_DEB_PACKAGES} \
+  && apt install --no-install-recommends -y ${DEB_BUILD_DEPS} ${DEB_PACKAGES} ${ADD_DEB_PACKAGES} \
   && useradd -ms /bin/bash mapproxy \
   && mkdir -p /mapproxy \
   && chown mapproxy /mapproxy \
@@ -57,6 +56,7 @@ RUN set -x \
   && pip3 uninstall --yes wheel \
   && pip3 cache purge \
   && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
+  && apt-get remove --yes --purge  ${DEB_BUILD_DEPS} \
   && apt-get --yes --purge autoremove \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
