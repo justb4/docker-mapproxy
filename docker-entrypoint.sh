@@ -35,7 +35,8 @@ if [ "$1" = 'mapproxy' ]; then
        --master \
        --enable-threads \
        --processes $MAPPROXY_PROCESSES \
-       --threads $MAPPROXY_THREADS $UWSGI_EXTRA_OPTIONS
+       --threads $MAPPROXY_THREADS \
+       $UWSGI_EXTRA_OPTIONS
   exit
 fi
 
